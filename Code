@@ -5,7 +5,12 @@ import re
 
 
 # Function to analyze code and mark vulnerabilities
-def analyze_code_for_security_vulnerabilities(file_path):
+def analyze_code_for_security_vulnerabilities():
+    file_path = file_path_var.get()
+    if not file_path or not os.path.exists(file_path):
+        messagebox.showwarning("File Error", "Please select a valid C code file first!")
+        return
+
     vulnerabilities_found = []
 
     with open(file_path, 'r') as file:
@@ -38,23 +43,25 @@ def analyze_code_for_security_vulnerabilities(file_path):
                 vulnerabilities_found.append((i + 1, description))
 
     code_display.config(state=tk.DISABLED)
-    return vulnerabilities_found
+
+    output_display.config(state=tk.NORMAL)
+    output_display.delete("1.0", tk.END)
+    if vulnerabilities_found:
+        output_display.insert(tk.END, "Detected Vulnerabilities:\n", "analysis_result")
+        for line_num, description in vulnerabilities_found:
+            output_display.insert(tk.END, f"Line {line_num}: {description}\n", "analysis_result")
+    else:
+        output_display.insert(tk.END, "No vulnerabilities detected based on predefined rules.\n", "analysis_result")
+    output_display.config(state=tk.DISABLED)
 
 
-# Function to handle file selection and analysis
+# Function to handle file selection only
 def upload_file():
     file_path = filedialog.askopenfilename(filetypes=[("C Files", "*.c")])
     if file_path and os.path.exists(file_path):
-        # Set the selected file path to the entry widget
-        file_path_var.set(os.path.basename(file_path))  # Display only the filename
-        vulnerabilities = analyze_code_for_security_vulnerabilities(file_path)
+        file_path_var.set(file_path)  # Set the selected file path to the entry widget
         output_display.config(state=tk.NORMAL)
-        if vulnerabilities:
-            output_display.insert(tk.END, "Detected Vulnerabilities:\n", "analysis_result")
-            for line_num, description in vulnerabilities:
-                output_display.insert(tk.END, f"Line {line_num}: {description}\n", "analysis_result")
-        else:
-            output_display.insert(tk.END, "No vulnerabilities detected based on predefined rules.\n", "analysis_result")
+        output_display.insert(tk.END, "File selected. Now click 'Analyze' to scan for vulnerabilities.\n", "chatbot")
         output_display.config(state=tk.DISABLED)
     else:
         messagebox.showwarning("File Upload", "The selected file does not exist!")
@@ -63,16 +70,12 @@ def upload_file():
 # Function to display welcome messages sequentially
 def display_welcome_messages():
     output_display.config(state=tk.NORMAL)
-
-    # Schedule the first message to appear after an initial delay
     window.after(2000, lambda: show_first_message())  # 2 seconds delay for the first message
 
 
 def show_first_message():
     output_display.insert(tk.END, "Chatbot: Hello! Welcome to Secure Code Chatbot.\n", "chatbot")
     output_display.config(state=tk.DISABLED)
-
-    # Schedule the next message to appear after a delay
     window.after(3000, lambda: display_second_message())  # 3 seconds delay for the second message
 
 
@@ -91,15 +94,7 @@ def start_new_conversation():
     code_display.delete("1.0", tk.END)
     code_display.config(state=tk.DISABLED)
     file_path_var.set("")  # Clear the file path
-
-    display_welcome_messages()  # Start displaying the welcome messages
-
-
-# Prompt user to upload the C code
-def prompt_for_upload():
-    output_display.config(state=tk.NORMAL)
-    output_display.insert(tk.END, "Chatbot: Please upload your C code file for analysis.\n", "chatbot")
-    output_display.config(state=tk.DISABLED)
+    display_welcome_messages()
 
 
 # Tkinter GUI Setup
@@ -116,46 +111,36 @@ output_display_label.grid(row=0, column=0, padx=20, pady=10, sticky="w")
 output_display = scrolledtext.ScrolledText(window, width=90, height=10, state=tk.DISABLED, font=("Courier New", 12),
                                            bg="#1E1E1E", fg="#61AFEF")
 output_display.grid(row=1, column=0, padx=20, pady=10, sticky="nsew")
-
-# Tag configurations
 output_display.tag_config("chatbot", foreground="#98C379", font=("Helvetica", 12, "bold"))
-output_display.tag_config("user_input", foreground="#E5C07B", font=("Helvetica", 12, "italic"))
 output_display.tag_config("analysis_result", foreground="#E06C75", font=("Helvetica", 12))
 
 # File selection section
 file_select_frame = tk.Frame(window, bg="#282C34")
 file_path_var = tk.StringVar()
-
 file_path_label = tk.Label(file_select_frame, text="Selected File: ", font=("Helvetica", 12), bg="#282C34", fg="white")
 file_path_label.pack(side=tk.LEFT, padx=5)
-
 file_path_entry = tk.Entry(file_select_frame, textvariable=file_path_var, width=60, state='readonly',
                            font=("Helvetica", 12), bg="#1E1E1E", fg="#ABB2BF")
 file_path_entry.pack(side=tk.LEFT, padx=5)
-
 browse_button = tk.Button(file_select_frame, text="Browse", command=upload_file, font=("Helvetica", 12, "bold"),
                           bg="#98C379", fg="white")
 browse_button.pack(side=tk.LEFT, padx=5)
-
 file_select_frame.grid(row=2, column=0, padx=20, pady=10, sticky="w")
 
 # Button frame
 button_frame = tk.Frame(window, bg="#282C34")
-upload_button = tk.Button(button_frame, text="Analyze C Code", command=upload_file, font=("Helvetica", 12, "bold"),
-                          bg="#61AFEF", fg="white")
-upload_button.pack(side=tk.LEFT, padx=20)
-
+analyze_button = tk.Button(button_frame, text="Analyze C Code", command=analyze_code_for_security_vulnerabilities,
+                           font=("Helvetica", 12, "bold"), bg="#61AFEF", fg="white")
+analyze_button.pack(side=tk.LEFT, padx=20)
 new_conversation_button = tk.Button(button_frame, text="New Conversation", command=start_new_conversation,
                                     font=("Helvetica", 12, "bold"), bg="#E06C75", fg="white")
 new_conversation_button.pack(side=tk.LEFT, padx=20)
-
 button_frame.grid(row=3, column=0, padx=20, pady=10, sticky="w")
 
 # C Code display area
 code_display_label = tk.Label(window, text="Uploaded Code with Highlighted Vulnerabilities:",
                               font=("Helvetica", 14, "bold"), fg="white", bg="#282C34")
 code_display_label.grid(row=4, column=0, padx=20, pady=10, sticky="w")
-
 code_display = scrolledtext.ScrolledText(window, width=90, height=15, font=("Courier New", 12), bg="#1E1E1E",
                                          fg="white")
 code_display.grid(row=5, column=0, padx=20, pady=10, sticky="nsew")
